@@ -122,7 +122,7 @@ function str=minify(str,BeastMode,max_length_after_merge,EntryFunctionNames,end_
 % Matlab releases either require or allow a space. Setting compress_to_block to true will make the
 % resulting code incompatible between the two styles.
 %
-% Version: 1.0
+% Version: 1.0.1
 % Date:    2020-12-23
 % Author:  H.J. Wisselink
 % Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
@@ -792,8 +792,12 @@ end
 
 % Strip all bracketed characters, as they can't contain new variables.
 L=zeros(size(temp));
-for open ='{(',L(       temp==open  )= 1;end
-for close='})',L([false temp==close])=-1;end
+open ='{';L(       temp==open  )= 1;
+close='}';L([false temp==close])=-1;
+L=cumsum(L);temp(L(1:(end-1))>0)='';
+L=zeros(size(temp));
+open ='(';L(       temp==open  )= 1;
+close=')';L([false temp==close])=-1;
 L=cumsum(L);temp(L(1:(end-1))>0)='';
 
 % Check for persistent and global (but don't change the globals to avoid side-effects).
