@@ -1,0 +1,532 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>minify</title><meta name="generator" content="MATLAB 9.9"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2020-12-23"><meta name="DC.source" content="minify.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>minify</h1><!--introduction--><p><tt style="font-size:0%">Formatted documentation for the minify function.</tt>
+<div style="margin-top:-5em;color:grey">Process Matlab code into a solid block of compact and unreadable but functionally equivalent code.
+</div>
+</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Description</a></li><li><a href="#2">Syntax</a></li><li><a href="#3">Output arguments</a></li><li><a href="#4">Input arguments</a></li><li><a href="#5">BeastMode parameters</a></li><li><a href="#6">Compatibility, version info, and licence</a></li></ul></div><h2 id="1">Description</h2><p>
+The likely use cases fall generally under two categories:<br>
+<ol>
+   <li> Attaching code as a dependency to allow your code to run, without having to refer to
+      separate FEX/Github entries. In some such places understanding the attached code is not
+      important, while space is at a premium (e.g. pdf attachments, where large amounts of
+      dependent code would be distracting).</li>
+   <li> Code obfuscation. Since p-code will only run on a subset of Matlab releases (and not at
+      all on GNU Octave), using that will limit compatibility. Additionally, given that the
+      encryption has been broken, this might be a good additional step (or replacement) to hide
+      the function of your code without harming its function.</li>
+</ol>
+The process of compacting Matlab code is split into several steps (steps 3-8 should be performed
+for each function separately and some steps are optional):<br><br>
+<ol>
+   <li> Strip all comments and line continuations.</li>
+   <li> Sort the functions (if there are multiple) in order to keep the entry function(s) at the
+      top of the output.</li>
+   <li> Separate the code and the embedded chars/strings.</li>
+   <li> Parse the code to select only the places where a new variable may be created in the
+      workspace. False positives should be avoided at all costs. False negatives should be
+      avoided, but are not a major issue.</li>
+   <li> Use that (and the list of local functions) to create a dictionary of variable and
+      function names.</li>
+   <li> Remove the entry function from that dictionary and replace every occurrence of a variable
+      or local function with a shorter/pseudonymized one.</li>
+   <li> Replace all double spaces in code with single space.</li>
+   <li> Put the code and chars/strings back together.</li>
+   <li> Merge lines if the result is shorter that a fixed length. A space, comma, or semicolon
+      may be added. Be careful with functions that rely on printing results to the command
+      window by omitting the semicolon, although such functions should probably not be minified
+      in the first place (as the variable names are changed).</li>
+</ol>
+This function was tested on a random sample of 1000 m files from the FileExchange. Some limits
+were imposed on the selection of files: only submissions with 5 downloads or more in the last 30
+days, at most 5 files per submission (taking the first files in the hierarchy, without checking
+if those actually would contain the main function), ignoring functions with fewer than 5 or more
+than 1000 lines, and ignoring functions with lines over 1000 characters long (as those probably
+contain data, not real code). If BeastMode is set to true the size of functions tends to be
+reduced to about 13% of the original number of lines (half of them are between 9.5% and 16.7%).
+Setting BeastMode to false will increase the variability by a lot, and results in file sizes of
+about 51% of the original number of lines (38.3-66.5%).
+<br>The compression depends mostly on the amount of comments, typical line length, amount and
+length of chars/strings, and typical variable name length.
+</p><h2 id="2">Syntax</h2><pre class="language-matlab">str_out=minify(str_in)
+str_out=minify(str_in,BeastMode)
+str_out=minify(str_in,BeastMode,max_length_after_merge)
+str_out=minify(str_in,BeastMode,max_length_after_merge,EntryFunctionNames)
+</pre><h2 id="3">Output arguments</h2><p>
+<table border=1>
+<tr><td>
+str_out
+</td><td>
+mx1 cell array with the minified code
+</td></tr>
+</table>
+</p><h2 id="4">Input arguments</h2><p>
+<table border=1>
+<tr><td>
+str_in
+</td><td>
+nx1 cell array of char arrays
+</td></tr>
+<tr><td>
+BeastMode
+</td><td>
+A logical that triggers additional steps to further minify the code. If this input is
+<code>true</code> (or <code>1</code>, <code>'on'</code>, ect), all defaults described below are
+used. <code>false</code> (or an invalid input) will set all fields to <code>false</code>.
+<br>Specific aspects can be set individually by supplying a <code>struct</code> instead. Any
+missing field will be filled with the default.
+<tr><td>
+max_length_after_merge
+</td><td>
+This is the target maximum length (the line length might be exceeded by the original code after
+the removal of the line continuation)
+<br>If <code>max_length_after_merge<10</code>, this value is multiplied by the maximum line
+length preference.
+<br>(if you want more than 10x, you can provide a negative value)
+</td></tr>
+<tr><td>
+EntryFunctionNames
+</td><td>
+This is a cell array or chars with function names that should be kept unchanged. These functions
+will be move to the top if there are multiple functions. This defaults to the first function (if
+any).
+</td></tr>
+</table>
+</p><h2 id="5">BeastMode parameters</h2><p>
+<table border=1>
+<tr><td>trim_spaces</td><td>
+<code>default=1;</code> Strip leading spaces and remove all double spaces that do not occur
+inside a char or a string.</td></tr>
+<tr><td>compress_to_block</td><td>
+<code>default=0;</code> Attempt to compress the entire input to a single block.
+<br>Setting this to <code>true</code> will cause the resulting code to be incompatible between
+modern Matlab releases and Octave and ML6.5. The reason is that the former require a space
+between <code>'end'</code> and <code>'function'</code>, while the latter require a comma or
+semicolon.</td></tr>
+<tr><td>compress_functions_separately</td><td>
+<code>default=1;</code> Compress each function to a separate block of code.
+<br>If proper detection of nested function is implemented, this will compress each parent
+function including the nested functions to a single block.
+<br>If compress_to_block is set to true, this is ignored.</td></tr>
+<tr><td>keep_original_function_names</td><td>
+<code>default=0;</code> Do not rename local functions.
+<br>This setting can be used if any code uses <code>eval</code> with the name of a local function
+in a <code>char</code> or a <code>string</code>. (you can use
+<code>func2str(@local_function)</code> to work around this issue)</td></tr>
+<tr><td>contains_nested_functions</td><td>
+<code>default=0;</code> Setting this to true will skip the steps that would break nested
+functions.</td></tr>
+</table>
+</p><h2 id="6">Compatibility, version info, and licence</h2><p>
+<table>
+<tr>
+<td> Compatibility </td>
+<td style="border:2px solid black;"> Windows XP/7/10 </td>
+<td style="border:2px solid black;"> Ubuntu 20.04 LTS </td>
+<td style="border:2px solid black;"> MacOS 10.15 Catalina </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML R2020b </td>
+<td> W10: works </td>
+<td> not tested </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML R2018a </td>
+<td> W10: works </td>
+<td> works </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML R2015a </td>
+<td> W10: works </td>
+<td> works </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML R2011a </td>
+<td> W10: works </td>
+<td> works </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML R2010b </td>
+<td> not tested </td>
+<td> works </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML R2010a </td>
+<td> W7: works </td>
+<td> not tested </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML 7.1 (R14SP3) </td>
+<td> XP: works </td>
+<td> not tested </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> ML 6.5 (R13) </td>
+<td> W10: works </td>
+<td> not tested </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Octave 6.1.0 </td>
+<td> W10: works </td>
+<td> not tested </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Octave 5.2.0 </td>
+<td> W10: works </td>
+<td> works </td>
+<td> not tested </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Octave 4.4.1 </td>
+<td> W10: works </td>
+<td> not tested </td>
+<td> works </td>
+</tr>
+</table>
+<br>
+Compatibility considerations:
+<ul>
+   <li> Support for <code>eval</code> and friends is limited to situation where they don't rely
+      on variable/function names (e.g. if it is used to create an anonymous function). You could
+      use something like <code>func2str(@local_function)</code> to use a local function call
+      inside an <code>eval</code> statement.</li>
+   <li> Nested functions are tricky to extract. It is possible (match up end statements with
+      <code>'if'</code>, <code>'try'</code>, <code>'while'</code>, <code>'for'</code>,
+      <code>'parfor'</code>, and <code>'function'</code>, then confirm every function has an
+      <code>'end'</code> and ignore nested functions while sorting the functions). I don't use
+      them (as they are incompatible with Matlab&nbsp;6.5 and Octave), but it isn't impossible to
+      modify this function. You can set <code>contains_nested_functions</code> to true to turn
+      off the parts that will interfere with nested functions.</li>
+   <li> There is no support for the arguments block. This is not a fundamental issue, it is just
+      not yet implemented in this function.</li>
+   <li> Octave and Matlab&nbsp;6.5 require a semicolon or comma between <code>'end'</code> and
+      <code>'function'</code>, while newer Matlab releases either require or allow a space.
+      Setting <code>compress_to_block</code> to <code>true</code> will make the resulting code
+      incompatible between the two styles.</li>
+</ul>
+</p><pre>Version: 1.0.0
+Date:    2020-12-23
+Author:  H.J. Wisselink
+Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
+Email = 'h_j_wisselink*alumnus_utwente_nl';
+Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2020b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% minify
+%
+% <html><tt style="font-size:0%">Formatted documentation for the minify function.</tt>
+% <div style="margin-top:-5em;color:grey">Process Matlab code into a solid block of compact and unreadable but functionally equivalent code.
+% </div>
+% </html>
+
+%% Description
+% <html>
+% The likely use cases fall generally under two categories:<br>
+% <ol>
+%    <li> Attaching code as a dependency to allow your code to run, without having to refer to
+%       separate FEX/Github entries. In some such places understanding the attached code is not
+%       important, while space is at a premium (e.g. pdf attachments, where large amounts of
+%       dependent code would be distracting).</li>
+%    <li> Code obfuscation. Since p-code will only run on a subset of Matlab releases (and not at
+%       all on GNU Octave), using that will limit compatibility. Additionally, given that the
+%       encryption has been broken, this might be a good additional step (or replacement) to hide
+%       the function of your code without harming its function.</li>
+% </ol>
+% The process of compacting Matlab code is split into several steps (steps 3-8 should be performed
+% for each function separately and some steps are optional):<br><br>
+% <ol>
+%    <li> Strip all comments and line continuations.</li>
+%    <li> Sort the functions (if there are multiple) in order to keep the entry function(s) at the
+%       top of the output.</li>
+%    <li> Separate the code and the embedded chars/strings.</li>
+%    <li> Parse the code to select only the places where a new variable may be created in the
+%       workspace. False positives should be avoided at all costs. False negatives should be
+%       avoided, but are not a major issue.</li>
+%    <li> Use that (and the list of local functions) to create a dictionary of variable and
+%       function names.</li>
+%    <li> Remove the entry function from that dictionary and replace every occurrence of a variable
+%       or local function with a shorter/pseudonymized one.</li>
+%    <li> Replace all double spaces in code with single space.</li>
+%    <li> Put the code and chars/strings back together.</li>
+%    <li> Merge lines if the result is shorter that a fixed length. A space, comma, or semicolon
+%       may be added. Be careful with functions that rely on printing results to the command
+%       window by omitting the semicolon, although such functions should probably not be minified
+%       in the first place (as the variable names are changed).</li>
+% </ol>
+% This function was tested on a random sample of 1000 m files from the FileExchange. Some limits
+% were imposed on the selection of files: only submissions with 5 downloads or more in the last 30
+% days, at most 5 files per submission (taking the first files in the hierarchy, without checking
+% if those actually would contain the main function), ignoring functions with fewer than 5 or more
+% than 1000 lines, and ignoring functions with lines over 1000 characters long (as those probably
+% contain data, not real code). If BeastMode is set to true the size of functions tends to be
+% reduced to about 13% of the original number of lines (half of them are between 9.5% and 16.7%).
+% Setting BeastMode to false will increase the variability by a lot, and results in file sizes of
+% about 51% of the original number of lines (38.3-66.5%).
+% <br>The compression depends mostly on the amount of comments, typical line length, amount and
+% length of chars/strings, and typical variable name length.
+% </html>
+
+%% Syntax
+%
+%   str_out=minify(str_in)
+%   str_out=minify(str_in,BeastMode)
+%   str_out=minify(str_in,BeastMode,max_length_after_merge)
+%   str_out=minify(str_in,BeastMode,max_length_after_merge,EntryFunctionNames)
+
+%% Output arguments
+%
+% <html>
+% <table border=1>
+% <tr><td>
+% str_out
+% </td><td>
+% mx1 cell array with the minified code
+% </td></tr>
+% </table>
+% </html>
+
+%% Input arguments
+%
+% <html>
+% <table border=1>
+% <tr><td>
+% str_in
+% </td><td>
+% nx1 cell array of char arrays
+% </td></tr>
+% <tr><td>
+% BeastMode
+% </td><td>
+% A logical that triggers additional steps to further minify the code. If this input is
+% <code>true</code> (or <code>1</code>, <code>'on'</code>, ect), all defaults described below are
+% used. <code>false</code> (or an invalid input) will set all fields to <code>false</code>.
+% <br>Specific aspects can be set individually by supplying a <code>struct</code> instead. Any
+% missing field will be filled with the default.
+% <tr><td>
+% max_length_after_merge
+% </td><td>
+% This is the target maximum length (the line length might be exceeded by the original code after
+% the removal of the line continuation)
+% <br>If <code>max_length_after_merge<10</code>, this value is multiplied by the maximum line
+% length preference.
+% <br>(if you want more than 10x, you can provide a negative value)
+% </td></tr>
+% <tr><td>
+% EntryFunctionNames
+% </td><td>
+% This is a cell array or chars with function names that should be kept unchanged. These functions
+% will be move to the top if there are multiple functions. This defaults to the first function (if
+% any).
+% </td></tr>
+% </table>
+% </html>
+
+%% BeastMode parameters
+% <html>
+% <table border=1>
+% <tr><td>trim_spaces</td><td>
+% <code>default=1;</code> Strip leading spaces and remove all double spaces that do not occur
+% inside a char or a string.</td></tr>
+% <tr><td>compress_to_block</td><td>
+% <code>default=0;</code> Attempt to compress the entire input to a single block.
+% <br>Setting this to <code>true</code> will cause the resulting code to be incompatible between
+% modern Matlab releases and Octave and ML6.5. The reason is that the former require a space
+% between <code>'end'</code> and <code>'function'</code>, while the latter require a comma or
+% semicolon.</td></tr>
+% <tr><td>compress_functions_separately</td><td>
+% <code>default=1;</code> Compress each function to a separate block of code.
+% <br>If proper detection of nested function is implemented, this will compress each parent
+% function including the nested functions to a single block.
+% <br>If compress_to_block is set to true, this is ignored.</td></tr>
+% <tr><td>keep_original_function_names</td><td>
+% <code>default=0;</code> Do not rename local functions.
+% <br>This setting can be used if any code uses <code>eval</code> with the name of a local function
+% in a <code>char</code> or a <code>string</code>. (you can use
+% <code>func2str(@local_function)</code> to work around this issue)</td></tr>
+% <tr><td>contains_nested_functions</td><td>
+% <code>default=0;</code> Setting this to true will skip the steps that would break nested
+% functions.</td></tr>
+% </table>
+% </html>
+
+%% Compatibility, version info, and licence
+% <html>
+% <table>
+% <tr>
+% <td> Compatibility </td>
+% <td style="border:2px solid black;"> Windows XP/7/10 </td>
+% <td style="border:2px solid black;"> Ubuntu 20.04 LTS </td>
+% <td style="border:2px solid black;"> MacOS 10.15 Catalina </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML R2020b </td>
+% <td> W10: works </td>
+% <td> not tested </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML R2018a </td>
+% <td> W10: works </td>
+% <td> works </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML R2015a </td>
+% <td> W10: works </td>
+% <td> works </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML R2011a </td>
+% <td> W10: works </td>
+% <td> works </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML R2010b </td>
+% <td> not tested </td>
+% <td> works </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML R2010a </td>
+% <td> W7: works </td>
+% <td> not tested </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML 7.1 (R14SP3) </td>
+% <td> XP: works </td>
+% <td> not tested </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> ML 6.5 (R13) </td>
+% <td> W10: works </td>
+% <td> not tested </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Octave 6.1.0 </td>
+% <td> W10: works </td>
+% <td> not tested </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Octave 5.2.0 </td>
+% <td> W10: works </td>
+% <td> works </td>
+% <td> not tested </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Octave 4.4.1 </td>
+% <td> W10: works </td>
+% <td> not tested </td>
+% <td> works </td>
+% </tr>
+% </table>
+% <br>
+% Compatibility considerations:
+% <ul>
+%    <li> Support for <code>eval</code> and friends is limited to situation where they don't rely
+%       on variable/function names (e.g. if it is used to create an anonymous function). You could
+%       use something like <code>func2str(@local_function)</code> to use a local function call
+%       inside an <code>eval</code> statement.</li>
+%    <li> Nested functions are tricky to extract. It is possible (match up end statements with
+%       <code>'if'</code>, <code>'try'</code>, <code>'while'</code>, <code>'for'</code>,
+%       <code>'parfor'</code>, and <code>'function'</code>, then confirm every function has an
+%       <code>'end'</code> and ignore nested functions while sorting the functions). I don't use
+%       them (as they are incompatible with Matlab&nbsp;6.5 and Octave), but it isn't impossible to
+%       modify this function. You can set <code>contains_nested_functions</code> to true to turn
+%       off the parts that will interfere with nested functions.</li>
+%    <li> There is no support for the arguments block. This is not a fundamental issue, it is just
+%       not yet implemented in this function.</li>
+%    <li> Octave and Matlab&nbsp;6.5 require a semicolon or comma between <code>'end'</code> and
+%       <code>'function'</code>, while newer Matlab releases either require or allow a space.
+%       Setting <code>compress_to_block</code> to <code>true</code> will make the resulting code
+%       incompatible between the two styles.</li>
+% </ul>
+% </html>
+%
+%  Version: 1.0.0
+%  Date:    2020-12-23
+%  Author:  H.J. Wisselink
+%  Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
+%  Email = 'h_j_wisselink*alumnus_utwente_nl';
+%  Real_email = regexprep(Email,{'*','_'},{'@','.'})
+##### SOURCE END #####
+--></body></html>
