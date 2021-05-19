@@ -1,7 +1,7 @@
-function str=minify(str,BeastMode,max_length_after_merge,EntryFunctionNames,end_function_char)
+function str=minify(str,BeastMode,max_line_len,EntryFunNames,AlwaysSpaceEllipsis,end_function_char)
 %Process Matlab code into a solid block of compact and unreadable but functionally equivalent code.
 %The output may require some manual tweaking to be optimally compact.
-%
+% 
 %Syntax:
 % str_out=minify(str_in)
 % str_out=minify(str_in,BeastMode)
@@ -20,6 +20,9 @@ function str=minify(str,BeastMode,max_length_after_merge,EntryFunctionNames,end_
 % EntryFunctionNames:     cell array with function names that should be kept unchanged, these
 %                         functions will be move to the top if there are multiple functions. This
 %                         defaults to the first function (if any).
+% AlwaysSpaceEllipsis:    either a logical or empty. If true an ellipsis will always be interpreted
+%                         as a space. The default will be determined based on the behavior of the
+%                         release.
 %
 %BeastMode parameters:
 % (missing fields will be filled with the default, BeastMode=false will set all fields to false)
@@ -44,9 +47,19 @@ function str=minify(str,BeastMode,max_length_after_merge,EntryFunctionNames,end_
 %                                       nested functions.
 %
 %Example:
-%  str=readfile('readfile.m');
+%  % You can get the readfile function here: www.mathworks.com/matlabcentral/fileexchange/68780.
+%  try tf=isempty(which(func2str(@readfile)));catch,tf=true;end
+%  if tf,readfile=@(fn)split(fileread(fn),{newline,[char(13) newline]});end
+%  % Read a function to a cellstr.
+%  str=readfile([mfilename '.m']);
+%  % Minify the function.
 %  str=minify(str);
+%  % Generate a function name.
+%  [p,n]=fileparts(tempname);fn_out=[p filesep 'fun_' n '.m'];
+%  % Write the minified function to a file.
 %  fid=fopen(fn_out,'w');fprintf(fid,'%s\n',str{:});fclose(fid);
+%  % Open the result in the editor.
+%  edit(fn_out)
 %
 % The likely use cases fall generally under two categories:
 %    1) Attaching code as a dependency to allow your code to run, without having to refer to
@@ -90,7 +103,27 @@ function str=minify(str,BeastMode,max_length_after_merge,EntryFunctionNames,end_
 % The compression depends mostly on the amount of comments, typical line length, amount and length
 % of chars/strings, and typical variable name length.
 %
-%Compatibility considerations:
+%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%|                                                                         |%
+%|  Version: 1.1.0                                                         |%
+%|  Date:    2021-05-19                                                    |%
+%|  Author:  H.J. Wisselink                                                |%
+%|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
+%|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
+%|  Real_email = regexprep(Email,{'*','_'},{'@','.'})                      |%
+%|                                                                         |%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%
+% Tested on several versions of Matlab (ML 6.5 and onward) and Octave (4.4.1 and onward), and on
+% multiple operating systems (Windows/Ubuntu/MacOS). For the full test matrix, see the HTML doc.
+% Compatibility considerations:
+% - Octave and ML6.5 require a semicolon or comma between 'end' and 'function', while newer Matlab
+%   releases either require a space or newline. Setting compress_to_block to true will make the
+%   resulting code incompatible between the two styles.
+% - The command syntax (e.g. "warning off all") will be incorrectly parsed. The literal text part
+%   of the call will be treated as normal code (so "off=false;warning off all" will become
+%   "v000=false;warning v000 all"). Consider using the function syntax instead.
 % - Support for eval and friends is limited to situation where they don't rely on variable/function
 %   names (e.g. if it is used to create an anonymous function). You could use something like
 %   func2str(@local_function) to use a local function call inside an eval statement.
@@ -101,49 +134,41 @@ function str=minify(str,BeastMode,max_length_after_merge,EntryFunctionNames,end_
 %   can set contains_nested_functions to true to turn off the parts that will interfere with nested
 %   functions.
 % - There is no support for the arguments block. This is not a fundamental issue, it is just not
-%   yet implemented in this function.
-%
-%  _____________________________________________________________________________
-% | Compatibility   | Windows XP/7/10 | Ubuntu 20.04 LTS | MacOS 10.15 Catalina |
-% |-----------------|-----------------|------------------|----------------------|
-% | ML R2020b       | W10: works      |  not tested      |  not tested          |
-% | ML R2018a       | W10: works      |  works           |  not tested          |
-% | ML R2015a       | W10: works      |  works           |  not tested          |
-% | ML R2011a       | W10: works      |  works           |  not tested          |
-% | ML R2010b       | not tested      |  works           |  not tested          |
-% | ML R2010a       | W7:  works      |  not tested      |  not tested          |
-% | ML 7.1 (R14SP3) | XP:  works      |  not tested      |  not tested          |
-% | ML 6.5 (R13)    | W10: works      |  not tested      |  not tested          |
-% | Octave 6.1.0    | W10: works      |  not tested      |  not tested          |
-% | Octave 5.2.0    | W10: works      |  works           |  not tested          |
-% | Octave 4.4.1    | W10: works      |  not tested      |  works               |
-% """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-% note: Octave and ML6.5 require a semicolon or comma between 'end' and 'function', while newer
-% Matlab releases either require or allow a space. Setting compress_to_block to true will make the
-% resulting code incompatible between the two styles.
-%
-% Version: 1.0.1
-% Date:    2020-12-23
-% Author:  H.J. Wisselink
-% Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
-% Email = 'h_j_wisselink*alumnus_utwente_nl';
-% Real_email = regexprep(Email,{'*','_'},{'@','.'})
+%   yet implemented in this function. Feel free to suggest the required edits on GitHub. The
+%   priority of this issue for me is low.
+% - If you use load() without an output argument, that will create variables in your workspace.
+%   This function doesn't know the variable names, so that syntax will result in errors. Use the
+%   S=load(___); syntax instead.
+% - Using save(___) might cause issues if the specific variable is renamed. In a future version of
+%   this function it may be possible to protect the variable names in a save call. Currently you
+%   should use a function that converts the input variable to a char: var2str=@(x) inputname(1);.
+% - Be careful with the plot(x,y,LineWidth=2) syntax (introduced in R2021a). If you have a variable
+%   or local function with the name LineWidth, this result in LineWidth being replaced by the
+%   shortened name. It might be possible to adapt this function to detect such use cases and avoid
+%   replacements. Feel free to suggest the required edits on GitHub. The priority of this issue for
+%   me is low.
+% - The interpretation of a line continuation changed in R2021a: "Previously, if an ellipsis
+%   followed an operator inside of a matrix or cell array, it caused the operator to be treated as
+%   unary. Ellipses will now be treated as a space in all cases." This function will return
+%   unambiguous code, but the interpretation of the input will be controled by the BeastMode
+%   struct. The default behavior follows the default from the release used.
 
 % Set defaults.
 persistent isOctave,if isempty(isOctave),isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;end
 if nargin<1,error('not enough inputs');end
 if nargin<2 || isempty(BeastMode),BeastMode=true;end
-if nargin<3 || isempty(max_length_after_merge),max_length_after_merge=1.5;end
+if nargin<3 || isempty(max_line_len),max_line_len=1.5;end
 %(strip the comments before setting the default for input arg 4)
-if nargin<5,end_function_char='';end % Undocumented, required if compress_to_block==true.
+if nargin<5,AlwaysSpaceEllipsis=[];end % The default for AlwaysAddSpaceForEllipsis is empty.
+if nargin<6,end_function_char='';end % Undocumented, required if compress_to_block==true.
 
 % Check inputs and parse the options.
 valid=false;try valid=isequal(str,cellstr(str));catch,end
 if ~valid,error('first input must be a cellstr');end
 BeastMode=FillBeastModeStruct(BeastMode);
-if max_length_after_merge<10 % Multiply with the maximum line length preference.
+if max_line_len<10 % Multiply with the maximum line length preference.
     %To have more than 10x the line length, you can provide a negative value.
-    max_length_after_merge=ceil(abs(max_length_after_merge)*GetMaxLineLengthPref);
+    max_line_len=ceil(abs(max_line_len)*GetMaxLineLengthPref);
 end
 % This is undocumented on purpose. If you set compress_to_block to true, this can be used this
 % input to 'cross-compile' between ML6.5 and Octave, and modern releases of Matlab. I.e. you can
@@ -155,18 +180,19 @@ SetDefault_end_function_char(end_function_char);
 
 % Strip all comments and merge line continuations (i.e. the ...).
 str=StripComments(str);
+str=MergeLineContinuation(str,AlwaysSpaceEllipsis);
 
 % If there are only comments, return an empty array.
 if numel(str)==0,return,end
 
 % Only now can we reliably detect the name of the first function.
-if nargin<4 || isempty(EntryFunctionNames),EntryFunctionNames=ListLocalFunctions(str{1});end
+if nargin<4 || isempty(EntryFunNames),EntryFunNames=ListLocalFunctions(str{1});end
 
-EntryFunctionNames=cellstr(EntryFunctionNames);% Ensure EntryFunctionNames is a cellstr.
+EntryFunNames=cellstr(EntryFunNames);% Ensure EntryFunctionNames is a cellstr.
 
 % Sort entry functions to the top, unless there are nested functions.
 if ~BeastMode.contains_nested_functions
-    functions=SortFunctions(str,EntryFunctionNames);
+    functions=SortFunctions(str,EntryFunNames);
 else
     % As long as the code in this else section makes sure not to separate nested functions from
     % their parent function, the rest of the BeastMode settings should work normally.
@@ -179,7 +205,7 @@ if BeastMode.keep_original_function_names
 else
     [ignore,only_cmd]=SplitCodeAndChar(vertcat(functions{:})); %#ok<ASGLU>
     names__fun=ListLocalFunctions(only_cmd);
-    names__fun(ismember(names__fun,EntryFunctionNames))=[];
+    names__fun(ismember(names__fun,EntryFunNames))=[];
     for n=1:numel(names__fun),names__fun{n,2}=sprintf('f%02d',n-1);end
     
     if BeastMode.contains_nested_functions
@@ -278,41 +304,37 @@ end
 if BeastMode.compress_to_block
     % Merge all lines into a single line (adding a comma, semicolon or space when needed) and
     % attempt to split that along commas and semicolons (adding ellipses where needed).
-    if numel(EntryFunctionNames)>1
+    if numel(EntryFunNames)>1
         % Split the entry functions from the rest and compress each to a block.
-        funs=cell(1,1+numel(EntryFunctionNames));
-        funs(1:numel(EntryFunctionNames))=functions(1:numel(EntryFunctionNames));
-        if numel(functions)>numel(EntryFunctionNames)
-            remainder=functions((numel(EntryFunctionNames)+1):end);
+        funs=cell(1,1+numel(EntryFunNames));
+        funs(1:numel(EntryFunNames))=functions(1:numel(EntryFunNames));
+        if numel(functions)>numel(EntryFunNames)
+            remainder=functions((numel(EntryFunNames)+1):end);
             funs{end}=vertcat(remainder{:}); % Add the remainder of the code.
         else
             funs(end)=[]; % Remove the last cell if it is not needed.
         end
         for n=1:numel(funs)
-            funs{n}=CompressFunctionBody(funs{n},max_length_after_merge);
+            funs{n}=CompressFunctionBody(funs{n},max_line_len);
         end
         % Merge back to a single array.
         str=vertcat(funs{:});
     else
         % Merge back to a single array.
         str=vertcat(functions{:});
-        str=CompressFunctionBody(str,max_length_after_merge);
+        str=CompressFunctionBody(str,max_line_len);
     end
 elseif BeastMode.compress_functions_separately
     % Compress each function separately.
     for n=1:numel(functions)
         if numel(functions{n})==1,continue,end % Skip the compression if it is already 1 line.
-        functions{n}=CompressFunctionBody(functions{n},max_length_after_merge);
+        functions{n}=CompressFunctionBody(functions{n},max_line_len);
     end
     % Merge back to a single array.
     str=vertcat(functions{:});
 else
     % No BeastMode option here, so merge back to a single array.
     str=vertcat(functions{:});
-end
-
-if nargout==0
-    clear str
 end
 end
 function opts=FillBeastModeStruct(BeastMode)
@@ -353,80 +375,145 @@ end
 end
 function out=CompressFunctionBody(body,max_length_after_merge)
 %Compress the function body. Semicolons, commas, spaces, and ellipses will be added if needed.
+%input: body (cellstr), max_length_after_merge (positive integer double)
 
-body=MergeShortLines(body,inf,false);
-txt=body{1};
-body=SplitLineToCodeAndChar(txt);
-% Find the places where we can put a line break with ellipsis (after a comma or space) or without
-% one (after a semicolon).
-loc=cell(size(body));
+persistent dict
+if isempty(dict)
+    % Legend:
+    %  1) symbol
+    %  2) penalty (as a percentage of the max length)
+    %  3) add ellipsis
+    %  4) add space
+    %  5) put break before or after symbol
+    dict={...
+        ';', 0,false,false, 0;
+        ',', 0,true ,false, 0; % The ellipsis is required when creating arrays.
+        ' ', 5,true ,false, 0;
+        ...'+',10,true ,true ,-1; % Only allowed when not creating arrays.
+        ...'-',10,true ,true ,-1; % Only allowed when not creating arrays.
+        '@',10,true ,false,-1;
+        '=',10,true ,false, 0}; % This should not split ==, but other occurences are fine.
+end
+
+% Adjust the maximum line length to account for the added spaces and ellipses.
+max_length_after_merge=max_length_after_merge-4;
+
+% Merge all lines of the code and blank the chars and strings.
+txt=MergeShortLines(body,inf,false);txt=txt{1};
+CodeAndChar=SplitLineToCodeAndChar(txt);
+
+% Encode the locations of the symbols we can use for a line break.
+loc=cell(size(CodeAndChar));
 for m=1:size(loc,2)
-    c=zeros(size(body{1,m}));
-    c(body{1,m}==';')=1;
-    c(body{1,m}==',')=2;
-    c(body{1,m}==' ')=3;
-    c(body{1,m}=='+')=4;
-    c(body{1,m}=='-')=4;
-    c(body{1,m}=='@')=4;
+    c=zeros(size(CodeAndChar{1,m}));
+    for n=1:size(dict,1)
+        c(CodeAndChar{1,m}==dict{n,1})=n;
+    end
     loc{1,m}=c;
-    loc{2,m}=zeros(size(body{2,m}));
+    loc{2,m}=zeros(size(CodeAndChar{2,m}));
 end
 loc=horzcat(loc{:});
-flipped_loc=fliplr(loc);
-flipped_txt=fliplr(txt);
-out=cell(ceil(numel(loc)/max_length_after_merge),1);
-n_out=1;
-while ~isempty(flipped_txt)
-    if n_out>1 && strcmp(out{end-1},'...')
-        % Prevent the same split to be performed over and over again. This will occur if a line
-        % ends with ',...' or ' ),...' with the semicolon being more than max_length_after_merge
-        % from the end.
-        % This code will result in a line that is longer than max_length_after_merge.
-        n_out=n_out-1;
-        idx=find(flipped_loc>0);
-        flipped_loc(idx(1))=0;
+loc=clean_double_equals(loc,dict);
+
+%Pre-allocate the output to minimum number of lines.
+out=cell(ceil(numel(loc)/max_length_after_merge),1);n_out=0;
+remaining=txt;numel_remaining_previous_iteration=NaN;
+while ~isempty(remaining)
+    n_out=n_out+1;
+    if numel(remaining)==numel_remaining_previous_iteration
+        % Escape an infinite loop (which shouldn't happen anyway).
+        max_length_after_merge=inf;
+        warning('infinite loop found'),keyboard
     end
-    % First try to find a semicolon or comma.
-    idx=find(flipped_loc>0);
-    if isempty(idx) || numel(flipped_txt)<=max_length_after_merge
-        % Either this line was short enough in the original file, or we reached the first line.
-        out{n_out}=flipped_txt(end:-1:1);
+    
+    %There are 4 possibilities:
+    % 1) The remaining text is shorter than the max length (or equal to it).
+    % 2) The remaining text contains a break point before the max length is reached.
+    % 3) The remaining text contains a break point after the max length.
+    % 4) The remaining text doesn't contain a break point.
+    if ...
+            numel(remaining)<=max_length_after_merge || ...
+            ~any(loc)
+        % Situation #1 or #4: store in the last cell and exit the loop.
+        out{n_out}=remaining;
         break
     end
-    % Find the last split location before the line limit.
-    idx(idx>max_length_after_merge)=[];
     
-    if isempty(idx)
-        idx=find(flipped_loc>0);idx=min(idx); %#ok<MXFND>
-    else
-        % Prefer an earlier semicolon if it is fewer than 5 characters before the last comma. For
-        % spaces use a threshold of 8. For the other characters use a threshold of 15.
-        last_separator(1)=max([-inf idx(flipped_loc(idx)==1)]);
-        last_separator(2)=max([-inf idx(flipped_loc(idx)==2)]);
-        last_separator(3)=max([-inf idx(flipped_loc(idx)==3)]);
-        last_separator(4)=max([-inf idx(flipped_loc(idx)==4)]);
-        [ignore,type]=max(last_separator-[0 5 8 15]); %#ok<ASGLU>
-        idx=last_separator(type);
-        add_ellipsis=flipped_loc(idx)~=1;
+    % Assume situation #2: split on the last option (considering the penalty).
+    [split_pos,type]=getSplitIndex(loc(1:max_length_after_merge),true,max_length_after_merge,dict);
+    
+    if isempty(split_pos)
+        % Situation #3: split on the first option (without considering the penalty).
+        [split_pos,type]=getSplitIndex(loc,false,max_length_after_merge,dict);
     end
-    idx=max(1,idx-1);% Don't include the comma or semicolon itself.
-    out{n_out}=fliplr(flipped_txt(1:idx));
-    n_out=n_out+1;
-    flipped_txt(1:idx)='';flipped_loc(1:idx)='';
-    if add_ellipsis
-        flipped_txt=['...' flipped_txt]; %#ok<AGROW>
-        flipped_loc=[0 0 0 flipped_loc]; %#ok<AGROW>
+    
+    % Perform the split (taking pre or post symbol split into account).
+    split_pos=split_pos+dict{type,5};
+    out{n_out}=remaining(1:split_pos);
+    
+    % Add a space and an ellipsis if needed.
+    extra=false;
+    if dict{type,4},extra=true;extra1= ' ' ;else,extra1='';end
+    if dict{type,3},extra=true;extra2='...';else,extra2='';end
+    if extra,out{n_out}=[out{n_out} extra1 extra2];end
+    
+    % Crop the remaining text and location vectors for the next iteration.
+    numel_remaining_previous_iteration=numel(remaining);
+    remaining(1:split_pos)='';loc(1:split_pos)=[];
+end
+
+% Crop excess cell elements.
+out((n_out+1):end)=[];
+end
+function loc=clean_double_equals(loc,dict)
+% Splitting in the middle of == is not allowed, so the first = should be removed from loc.
+persistent equals_dict_index
+if isempty(equals_dict_index)
+    equals_dict_index=find(ismember(dict(:,1),'='));
+end
+L= loc==equals_dict_index ;
+L= L(1:(end-1)) & L(2:end) ;
+loc(L)=0;
+end
+function [split_pos,type]=getSplitIndex(loc,pick_last,max_length_after_merge,dict)
+% Get the position and dict index of the split character. If none is found this returns empty.
+split_pos=[];type=[];
+if ~any(loc),return,end
+
+persistent penalty_dict
+if isempty(penalty_dict)
+    penalty_dict=cell2mat(dict(:,2)).'/100;
+end
+
+split_pos=find(loc); % All possible split positions.
+if pick_last
+    % Load penalty values. Cap to 50 to deal with unreasonable limits (like inf).
+    penalty=max(50,max_length_after_merge*penalty_dict(loc(split_pos)));
+    [ignore,ind]=max(split_pos-penalty); %#ok<ASGLU>
+else
+    [ignore,ind]=min(split_pos); %#ok<ASGLU>
+end
+split_pos=split_pos(ind); % Actual split position.
+type=loc(split_pos); % Prevent repeated indexing.
+
+if pick_last
+    % Check if this would result in a line that is too long, in which case the process should be
+    % repeated without the currently selected split location.
+    % This is only relevant if there actually is a split location under the limit.
+    reduce_max_by=dict{type,4}+3*dict{type,3}; % Account for extra space and ellipsis.
+    if split_pos>(max_length_after_merge+reduce_max_by)
+        loc=loc(1:(split_pos-1));
+        [split_pos,type]=getSplitIndex(loc,pick_last,max_length_after_merge,dict,penalty_dict);
     end
 end
-out=flipud(out);
 end
-function state=DetermineSparseState(line)
-% Determine the state of the sparser for every character to be able to detect comments and to split
+function state=DetermineParseState(line)
+% Determine the state of the parser for every character to be able to detect comments and to split
 % chars/strings and code.
 % The input is a char vector, the output is a same-sized vector with values described below.
 %
 %state==-1 - escaping character for literal ' or "
-%state==0  - normal code
+%state==0  - normal code (including command syntax characters)
 %state==1  - opening a char array
 %state==2  - inside a char array
 %state==3  - closing a char array
@@ -591,28 +678,21 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 % not be complete. Although it should be possible to load the list from Wikipedia, this is not
 % implemented.
 %
-%  _____________________________________________________________________________
-% | Compatibility   | Windows XP/7/10 | Ubuntu 20.04 LTS | MacOS 10.15 Catalina |
-% |-----------------|-----------------|------------------|----------------------|
-% | ML R2020b       | W10: works      |  not tested      |  not tested          |
-% | ML R2018a       | W10: works      |  works           |  not tested          |
-% | ML R2015a       | W10: works      |  works           |  not tested          |
-% | ML R2011a       | W10: works      |  works           |  not tested          |
-% | ML R2010b       | not tested      |  works           |  not tested          |
-% | ML R2010a       | W7:  works      |  not tested      |  not tested          |
-% | ML 7.1 (R14SP3) | XP:  works      |  not tested      |  not tested          |
-% | ML 6.5 (R13)    | W10: works      |  not tested      |  not tested          |
-% | Octave 6.1.0    | W10: works      |  not tested      |  not tested          |
-% | Octave 5.2.0    | W10: works      |  works           |  not tested          |
-% | Octave 4.4.1    | W10: works      |  not tested      |  works               |
-% """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%|                                                                         |%
+%|  Version: 1.0.6                                                         |%
+%|  Date:    2021-03-11                                                    |%
+%|  Author:  H.J. Wisselink                                                |%
+%|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
+%|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
+%|  Real_email = regexprep(Email,{'*','_'},{'@','.'})                      |%
+%|                                                                         |%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %
-% Version: 1.0.5
-% Date:    2020-12-08
-% Author:  H.J. Wisselink
-% Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
-% Email = 'h_j_wisselink*alumnus_utwente_nl';
-% Real_email = regexprep(Email,{'*','_'},{'@','.'})
+% Tested on several versions of Matlab (ML 6.5 and onward) and Octave (4.4.1 and onward), and on
+% multiple operating systems (Windows/Ubuntu/MacOS). For the full test matrix, see the HTML doc.
+% Compatibility considerations:
+% - This is expected to work on all releases.
 
 %The decimal of the version numbers are padded with a 0 to make sure v7.10 is larger than v7.9.
 %This does mean that any numeric version input needs to be adapted. multiply by 100 and round to
@@ -639,7 +719,7 @@ if isempty(v_num)
         'R2013a' 801;'R2013b' 802;'R2014a' 803;'R2014b' 804;'R2015a' 805;
         'R2015b' 806;'R2016a' 900;'R2016b' 901;'R2017a' 902;'R2017b' 903;
         'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;'R2020a' 908;
-        'R2020b',909};
+        'R2020b' 909;'R2021a' 910};
 end
 
 if octave
@@ -762,7 +842,23 @@ else
     var=var(sort(b));
 end
 var(ismember(var,glo))=[];% Remove globals from the list of variables.
+var(ListVariables_HasHandleRef(var,str))=[];
 warning(w)% Reset warning.
+end
+function L=ListVariables_HasHandleRef(var,str)
+%It is possible to replace a missing function with an anonymous function like this:
+%  if isempty(which(func2str(@readfile))),readfile=@(fn)split(fileread(fn),newline);end
+%By doing this, it is possible to use the missing function without having to worry whether it is
+%available. As a consequence, 'readfile' should be treated as a function in this context, not as a
+%variable.
+%In a future version a BeastMode setting might be introduced so in this example only the
+%'@readfile' will be protected and later uses will be obfuscated.
+
+str=sprintf('%s ',str{:});
+expression='@[a-zA-Z]+[_a-zA-Z0-9]*';
+match=regexp_outkeys(str,expression,'match');
+match=strrep(match,'@','');
+L=ismember(var,match);
 end
 function [var,n,glo,N]=ListVariables_ParseLine(str,var,n,glo,N)
 persistent isOctave,if isempty(isOctave),isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;end
@@ -792,10 +888,12 @@ end
 
 % Strip all bracketed characters, as they can't contain new variables.
 L=zeros(size(temp));
+temp =strrep(temp,'}{','__');
 open ='{';L(       temp==open  )= 1;
 close='}';L([false temp==close])=-1;
 L=cumsum(L);temp(L(1:(end-1))>0)='';
 L=zeros(size(temp));
+% )( is not a valid syntax, so we don't need to spend time checking for it.
 open ='(';L(       temp==open  )= 1;
 close=')';L([false temp==close])=-1;
 L=cumsum(L);temp(L(1:(end-1))>0)='';
@@ -875,12 +973,63 @@ for k=1:numel(tokens)
     var{n,1}=str(tokens{k}(1):tokens{k}(2));
 end
 end
+function str=MergeLineContinuation(str,override_default)
+%Remove the line continuations from a cellstr and merge the lines.
+%
+%In R2021a the interpretation of an ellipsis changed. Starting from this release '...\n\s*' is not
+%gobbled, but it is interpreted as a space. The second input allows to deviate from the default.
+persistent AlwaysAddSpace
+if isempty(AlwaysAddSpace) % In R2021a the interpretation of ... changed.
+    %Release notes section:
+    %http://web.archive.org/web/20210504113526/
+    %https://www.mathworks.com/help/matlab/release-notes.html
+    %#mw_ef23ce50-083b-4ec9-af8c-e8d65d8ce308
+    AlwaysAddSpace=numel(eval(sprintf('[1 -...\n2]')))==1;
+    %Note that this only applies to unary operation (i.e. +-~).
+end
+tf=AlwaysAddSpace;
+if nargin==2 && ~isempty(override_default),tf=override_default;end
+
+% Loop through the line to remove line continuations (back to front so lines can be deleted).
+for n = (numel(str)-1):-1:1
+    HasEllipsis=false;if numel(str{n})>=3,HasEllipsis=strcmp(str{n}((end-2):end),'...');end
+    if HasEllipsis
+        % Remove the ellipsis and preceding whitespace (except 1).
+        str{n}((1+regexp(str{n},'\s*...$')):end)='';
+        if str{n}(end)=='.',str{n}(end)='';end
+        % Find the index to strip leading whitespace from the next line.
+        idx=find(~isspace(str{n+1}));
+        if ~isempty(idx)&&idx(1)>1,idx=idx(1);else,idx=1;end
+        % Merge, adding a space to avoid syntax errors.
+        if tf
+            if numel(str{n})>=1 && any(str{n}(end)==   ',;*/^\@<>&|=')
+                padding='';else,padding=' ';
+            end
+        else
+            if numel(str{n})>=1 && any(str{n}(end)=='+-~,;*/^\@<>&|=')
+                padding='';else,padding=' ';
+            end
+        end
+        if idx==1 % Avoid indexing if we don't need to.
+            str{n}=[str{n} padding str{n+1}         ];str(n+1)=[];
+        else
+            str{n}=[str{n} padding str{n+1}(idx:end)];str(n+1)=[];
+        end
+    end
+end
+end
 function str=MergeShortLines(str,max_length_after_merge,dont_merge_function_lines)
 %Merge lines if they are short enough, adding padding spaces, commas or semicolons when needed.
 if nargin<3,dont_merge_function_lines=true;end
+str(cellfun('isempty',str))=[];% This should only be required for files with an invalid syntax.
 pad=comma_or_semicolon(str);
 for n=(numel(str)-1):-1:1
     line1=str{n};line2=str{n+1};
+    % Strip trailing ... and set a space as padding character.
+    if strcmp(line1((max(1,end-2)):max(1,end)),'...')
+        line1((end-2):end)='';
+        pad(n)=' ';
+    end
     % Strip leading whitespace.
     line2=regexprep(line2,'^\s*','');
     if dont_merge_function_lines
@@ -891,7 +1040,7 @@ for n=(numel(str)-1):-1:1
     if ~strcmp(line1(end),';') && ~strcmp(line1(end),',') 
         line1=[line1 pad(n)]; %#ok<AGROW>
     end
-    % A try statement should be followed by a space or newline.
+    % A try statement should be followed by a space or newline, not a comma.
     if strcmp(line1((max(1,end-3)):max(1,end-1)),'try')
         line1(end)=' ';
     end
@@ -1020,8 +1169,8 @@ for param=1:(nargin-2)
             varargout{param}=split;
         otherwise
             fn=fieldnames(legacy);
-            errorstr=['Extra regexp output type not implemented, only the following types are ',...
-                'implemented:',char(10),sprintf('%s, ',fn{:})]; %#ok<CHARTEN>
+            errorstr=['Extra regexp output type not implemented,',char(10),'only the following',...
+                ' types are implemented:',char(10),sprintf('%s, ',fn{:})]; %#ok<CHARTEN>
             errorstr((end-1):end)='';%Remove trailing ', '
             error('HJW:regexp_outkeys:NotImplemented',errorstr)
     end
@@ -1140,16 +1289,18 @@ end
 end
 function split_line=SplitLineToCodeAndChar(str)
 %Split a char array into code and char components.
+%(NB: this marks the character parts of the command syntax as code)
+%
 %Syntax:
 %  split_line=SplitLineToCodeAndChar(str)
 %
 % str:        1xn char array with a single line of Matlab code
-% split_line: 2xm cell array with all chars on the second row (such that str==horzcat(full_line{:})
+% split_line: 2xm cell array with all chars on the second row (such that str=horzcat(split_line{:})
 
 str=[' ' str ' '];% Pad with spaces to standardize state detection output shape.
 
 % Determine which characters are inside chars/strings.
-state=DetermineSparseState(str);
+state=DetermineParseState(str);
 
 y=diff(state==0);
 CodeStarts=[1 find(y==1)+1             ];
@@ -1214,7 +1365,7 @@ else
 end
 
 % Remove block comments.
-block_comment=cell(1,2);
+block_comment=cell(1,2);w=warning('off','REGEXP:multibyteCharacters');
 for n=1:2
     if n==1,brace='\{';else,brace='\}';end
     % Block comments only allow whitespace on the lines with %{ and %}.
@@ -1222,6 +1373,8 @@ for n=1:2
     if isa(block_comment{n},'double'),block_comment{n}=block_comment(n);end % Only needed pre-R14.
     block_comment{n}=~cellfun('isempty',block_comment{n});
 end
+% Reset warning state.
+warning(w);
 % Block comments can be nested. The cumsum skips the last closing %}.
 block_comment=cumsum(block_comment{1}-block_comment{2})>0 | block_comment{2};
 % Remove block comments from the cell array.
@@ -1245,26 +1398,6 @@ for n = 1:numel(ostr)
     ostr{n} = str;
 end
 
-% Loop through the line to remove line continuations (back to front so lines can be deleted).
-for n = numel(ostr):-1:1
-    removed=istr{n}((1+numel(ostr{n})):end);
-    % Does the removed text start with ... (optionally padded with whitespace)?
-    [ind_s,ind_e]=regexp(removed,'[\s]*[^\s\.%]?[\s]*\.{3}');
-    if ~isempty(ind_e)&&ind_s(1)==1&&numel(istr)>n
-        % Find the index to strip leading whitespace from the next line.
-        idx=find(~isspace(ostr{n+1}));
-        if ~isempty(idx)&&idx(1)>1,idx=idx(1);else,idx=1;end
-        % Merge, adding a space (only if required) to avoid syntax errors.
-        if numel(ostr{n})>=1 && any(ostr{n}(end)=='~,;+-*/^\@<>&|=')
-            padding='';else,padding=' ';
-        end
-        if idx==1 % Avoid indexing if we don't need to.
-            ostr{n}=[ostr{n} padding ostr{n+1}];ostr(n+1)=[];
-        else
-            ostr{n}=[ostr{n} padding ostr{n+1}(idx:end)];ostr(n+1)=[];
-        end
-    end
-end
 % Remove blank lines.
 ostr(cellfun('isempty',ostr))=[];
 % If the input was a character array, make sure output is so too.
@@ -1298,16 +1431,19 @@ else
 end
 
 % Determine which characters are inside chars/strings.
-state=DetermineSparseState(line);
+state=DetermineParseState(line);
 
 % Find the first percent symbol or ellipsis that has a state of 0 (i.e. code).
 ind1=strfind(line,'%');ind2=strfind(line,'...');
-ind=[ind1(state(ind1)==0) ind2(state(ind2)==0)];
+ind=[ind1(state(ind1)==0) 3+ind2(state(ind2)==0)];
+%                         ^^ Avoid removing the ellipsis itself.
+% Remove trailing comments.
 if ~isempty(ind),line(min(ind):end)='';end
 stripped=line;
 end
 function [isLogical,val]=test_if_scalar_logical(val)
 %Test if the input is a scalar logical or convertible to it.
+%The char and string test are not case sensitive.
 %(use the first output to trigger an input error, use the second as the parsed input)
 %
 % Allowed values:
@@ -1315,11 +1451,15 @@ function [isLogical,val]=test_if_scalar_logical(val)
 %- 1 or 0
 %- 'on' or 'off'
 %- matlab.lang.OnOffSwitchState.on or matlab.lang.OnOffSwitchState.off
+%- 'enable' or 'disable'
+%- 'enabled' or 'disabled'
 persistent states
 if isempty(states)
     states={true,false;...
         1,0;...
-        'on','off'};
+        'on','off';...
+        'enable','disable';...
+        'enabled','disabled'};
     try
         states(end+1,:)=eval('{"on","off"}');
     catch
@@ -1327,6 +1467,9 @@ if isempty(states)
 end
 isLogical=true;
 try
+    if isa(val,'char') || isa(val,'string')
+        try val=lower(val);catch,end
+    end
     for n=1:size(states,1)
         for m=1:2
             if isequal(val,states{n,m})
